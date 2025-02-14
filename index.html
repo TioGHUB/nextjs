@@ -1,0 +1,284 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Todo List</title>
+    <style>
+      /* Styling Global */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+      }
+      .todo-app {
+        max-width: 500px;
+        margin: 50px auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      h1 {
+        text-align: center;
+      }
+      
+      /* Styling Form Input */
+      form {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+      form input {
+        flex: 1;
+        padding: 10px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      form button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        background-color: #28a745;
+        color: #fff;
+        border-radius: 3px;
+        margin-left: 10px;
+        cursor: pointer;
+      }
+      form button:hover {
+        background-color: #218838;
+      }
+      
+      /* Styling Daftar Todo */
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+      }
+      li:last-child {
+        border-bottom: none;
+      }
+      li > span {
+        flex: 1;
+      }
+      li > div {
+        display: flex;
+      }
+      li button {
+        margin-left: 10px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      li button.edit {
+        background-color: #ffc107;
+        color: #fff;
+      }
+      li button.edit:hover {
+        background-color: #e0a800;
+      }
+      li button.delete {
+        background-color: #dc3545;
+        color: #fff;
+      }
+      li button.delete:hover {
+        background-color: #c82333;
+      }
+      
+      /* Styling untuk mode edit pada Todo Item */
+      li form {
+        display: flex;
+        flex: 1;
+      }
+      li form input {
+        flex: 1;
+        padding: 5px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      li form button {
+        padding: 5px 10px;
+        font-size: 14px;
+        margin-left: 5px;
+      }
+      li form button.update {
+        background-color: #007bff;
+        color: #fff;
+      }
+      li form button.update:hover {
+        background-color: #0069d9;
+      }
+      li form button.cancel {
+        background-color: #6c757d;
+        color: #fff;
+      }
+      li form button.cancel:hover {
+        background-color: #5a6268;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <!-- Memasukkan React dan ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel untuk meng-compile JSX di browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script type="text/babel">
+      // Komponen FormInput: Menangani input dan penambahan todo baru
+      function FormInput({ handleSubmit, handleChange, activity }) {
+        return (
+          <form onSubmit={handleSubmit}>
+            <input
+              type="text"
+              placeholder="Masukan aktifitas"
+              value={activity}
+              onChange={(e) => handleChange(e.target.value)}
+            />
+            <button type="submit">Tambah</button>
+          </form>
+        );
+      }
+
+      // Komponen TodoItem: Menampilkan setiap item todo dengan fitur edit dan delete
+      function TodoItem({ item, onDelete, onToggleEdit, onUpdate }) {
+        const [editText, setEditText] = React.useState(item.text);
+
+        const handleEditChange = (e) => {
+          setEditText(e.target.value);
+        };
+
+        const handleUpdate = (e) => {
+          e.preventDefault();
+          if (editText.trim() === "") return;
+          onUpdate(item.id, editText);
+        };
+
+        // Jika item sedang dalam mode edit, tampilkan form edit
+        if (item.isEditing) {
+          return (
+            <li>
+              <form onSubmit={handleUpdate}>
+                <input 
+                  type="text" 
+                  value={editText} 
+                  onChange={handleEditChange} 
+                />
+                <button type="submit" className="update">Update</button>
+                <button type="button" className="cancel" onClick={() => onToggleEdit(item.id)}>Cancel</button>
+              </form>
+            </li>
+          );
+        } else {
+          // Jika tidak dalam mode edit, tampilkan teks beserta tombol edit & delete
+          return (
+            <li>
+              <span>{item.text}</span>
+              <div>
+                <button onClick={() => onToggleEdit(item.id)} className="edit">Edit</button>
+                <button onClick={() => onDelete(item.id)} className="delete">Delete</button>
+              </div>
+            </li>
+          );
+        }
+      }
+
+      // Komponen Content: Merender daftar TodoItem
+      function Content({ list, onDelete, onToggleEdit, onUpdate }) {
+        return (
+          <ul>
+            {list.map((item) => (
+              <TodoItem 
+                key={item.id} 
+                item={item} 
+                onDelete={onDelete}
+                onToggleEdit={onToggleEdit}
+                onUpdate={onUpdate}
+              />
+            ))}
+          </ul>
+        );
+      }
+
+      // Komponen utama TodoApp: Mengelola state dan fungsi CRUD
+      function TodoApp() {
+        const [activity, setActivity] = React.useState('');
+        const [list, setList] = React.useState([]);
+
+        // Meng-handle perubahan input
+        const handleChange = (value) => {
+          setActivity(value);
+        };
+
+        // Menambahkan todo baru
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (activity.trim() === '') return;
+          const newTodo = {
+            id: Date.now(),
+            text: activity,
+            isEditing: false
+          };
+          setList([...list, newTodo]);
+          setActivity('');
+        };
+
+        // Menghapus todo berdasarkan id
+        const handleDelete = (id) => {
+          setList(list.filter(item => item.id !== id));
+        };
+
+        // Mengaktifkan atau menonaktifkan mode edit pada todo item
+        const handleToggleEdit = (id) => {
+          setList(
+            list.map(item => 
+              item.id === id ? { ...item, isEditing: !item.isEditing } : item
+            )
+          );
+        };
+
+        // Meng-update teks todo dan mematikan mode edit
+        const handleUpdate = (id, newText) => {
+          setList(
+            list.map(item =>
+              item.id === id ? { ...item, text: newText, isEditing: false } : item
+            )
+          );
+        };
+
+        return (
+          <div className="todo-app">
+            <h1>Todo List</h1>
+            <FormInput 
+              handleSubmit={handleSubmit}
+              handleChange={handleChange}
+              activity={activity}
+            />
+            <Content 
+              list={list}
+              onDelete={handleDelete}
+              onToggleEdit={handleToggleEdit}
+              onUpdate={handleUpdate}
+            />
+          </div>
+        );
+      }
+
+      // Render aplikasi ke dalam DOM
+      const domNode = document.getElementById('app');
+      const root = ReactDOM.createRoot(domNode);
+      root.render(<TodoApp />);
+    </script>
+  </body>
+</html>
